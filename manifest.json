@@ -1,0 +1,44 @@
+{
+  "manifest_version": 2,
+  "name": "Sebov Autofill",
+  "version": "0.1.0",
+  "description": "Save form inputs on a site and autofill them later.",
+  "browser_action": {
+    "default_title": "Sebov Autofill",
+    "default_popup": "popup.html",
+    "default_icon": {
+    "32": "icons/icon_32.png",
+    "48": "icons/icon_48.png"
+  }
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "quick-autofill": {
+      "suggested_key": {
+        "default": "Alt+Shift+L",
+        "mac": "Alt+Shift+L"
+      },
+      "description": "Autofill the current page"
+    }
+  },
+  "icons": {
+    "32": "icons/icon_32.png",
+    "48": "icons/icon_48.png",
+    "128": "icons/icon_128.png"
+  }
+}
