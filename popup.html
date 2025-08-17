@@ -3,42 +3,156 @@
   <head>
     <meta charset="utf-8" />
     <style>
+      /* Dark theme */
       body {
         font: 13px/1.4 system-ui, sans-serif;
-        min-width: 240px;
+        min-width: 260px;
         padding: 10px;
-        background-color: #1e1e1e; 
-        color: #f0f0f0;            
+        background-color: #1e1e1e;
+        color: #f0f0f0;
       }
+      h3 { margin: 0 0 8px; font-weight: 600; }
+
       button {
         width: 100%;
         margin: 6px 0;
         padding: 8px;
         border: none;
-        border-radius: 4px;
-        background-color: #3a3a3a; 
-        color: #ffffff;
+        border-radius: 6px;
+        background: #3a3a3a;
+        color: #fff;
         cursor: pointer;
       }
-      button:hover {
-        background-color: #505050;
+      button:hover { background: #505050; }
+      button:focus { outline: 2px solid #888; }
+      button:active { background: #606060; }
+
+      .row {
+        position: relative; /* for dropdown */
       }
-      h3 {
-        margin-top: 0;
-        font-weight: 500;
-        color: #ffffff;
+
+      /* Dropdown (shown on hover over the Change button) */
+  .dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% - 1px);   /* overlap border by 1px – no gap */
+    background: #262626;
+    border: 1px solid #3f3f3f;
+    border-radius: 6px;
+    padding: 6px;
+    /* margin-top: 4px;  <-- REMOVE THIS */
+    display: none;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 999;
+  }
+  .row:hover .dropdown,
+  .dropdown:hover {
+    display: block;
+  }
+      .item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: default;
       }
-      small {
-        color: #aaaaaa;
+      .item:hover { background: #333; }
+      .name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
+      .active-badge {
+        font-size: 11px;
+        color: #9ad;
+        margin-left: 6px;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .link {
+        background: #2f2f2f;
+        padding: 4px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .link:hover { background: #454545; }
+      .danger { color: #f66; }
+      #status { min-height: 1.2em; color: #bbb; }
+      #currentProfile { font-weight: 600; }
+
+        .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .dialog {
+    width: 90%;
+    max-width: 320px;
+    background: #2a2a2a;
+    border: 1px solid #3f3f3f;
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.6);
+  }
+  .dialog h4 { margin: 0 0 10px; font-weight: 600; }
+  .dialog input {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #1e1e1e;
+    color: #f0f0f0;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+  }
+  .dialog .row { display:flex; gap:8px; justify-content:flex-end; }
+  .btn {
+    background:#3a3a3a; color:#fff; border:none; border-radius:6px; padding:8px 10px; cursor:pointer;
+  }
+  .btn:hover { background:#505050; }
+  .btn-danger { color:#ff6b6b; }
     </style>
   </head>
   <body>
     <h3>Sebov Autofill</h3>
-    <button id="capture">Save current form</button>
-    <button id="fill">Autofill this page</button>
-    <button id="clear">Clear saved for this site</button>
-    <p id="status"><small>Ready</small></p>
+
+    <button id="saveBtn">Save current form</button>
+
+    <button id="fillBtn">Autofill this page (<span id="currentProfile">none</span>)</button>
+
+    <div class="row">
+      <button id="changeBtn" title="Hover to show saved forms">Change autofill form ▾</button>
+      <div id="dropdown" class="dropdown"><!-- populated by JS --></div>
+    </div>
+
+    <p id="status">Ready</p>
+
+    <div id="overlay" class="overlay">
+  <div class="dialog" role="dialog" aria-modal="true">
+    <h4 id="dlgTitle">Sebov Autofill</h4>
+    <div id="dlgBody">
+      <label for="nameInput">Save as profile name:</label>
+      <input id="nameInput" type="text" value="Default" />
+    </div>
+    <div class="row">
+      <button id="dlgCancel" class="btn">Cancel</button>
+      <button id="dlgOk" class="btn">OK</button>
+    </div>
+  </div>
+</div>
+
+
     <script src="popup.js"></script>
   </body>
 </html>

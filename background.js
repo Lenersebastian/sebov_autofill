@@ -1,10 +1,6 @@
+// ===== Helpers =====
 function getDomain(url) {
-  try {
-    const u = new URL(url);
-    return u.hostname;
-  } catch {
-    return "unknown";
-  }
+  try { return new URL(url).hostname; } catch { return "unknown"; }
 }
 
 async function getActiveTab() {
@@ -12,53 +8,128 @@ async function getActiveTab() {
   return tab;
 }
 
-// Overwrites the screen form Snapshot - only one snapshot per URL
-async function captureSiteSnapshot() {
-  const tab = await getActiveTab();
-  if (!tab?.id || !tab.url) return { ok: false, reason: "No active tab" };
-  const domain = getDomain(tab.url);
-
-  const resp = await browser.tabs.sendMessage(tab.id, { type: "CAPTURE_FIELDS" });
-  if (!resp?.ok) return { ok: false, reason: "capture failed" };
-
-  const key = `site:${domain}`;
-  await browser.storage.local.set({ [key]: resp.data });
-  return { ok: true, domain, count: Object.keys(resp.data || {}).length };
-}
-
-async function fillSiteSnapshot() {
+async function getSiteKeyAndState() {
   const tab = await getActiveTab();
   if (!tab?.id || !tab.url) return { ok: false, reason: "No active tab" };
   const domain = getDomain(tab.url);
   const key = `site:${domain}`;
-  const data = (await browser.storage.local.get(key))[key];
-
-  if (!data) return { ok: false, reason: "No saved snapshot for this domain" };
-
-  const resp = await browser.tabs.sendMessage(tab.id, { type: "FILL_FIELDS", data });
-  return { ok: !!resp?.ok, domain, filled: resp?.filled ?? 0 };
+  const state = (await browser.storage.local.get(key))[key] || { profiles: {}, active: null };
+  return { ok: true, tab, domain, key, state };
 }
 
-// Messages from popup window
-browser.runtime.onMessage.addListener(async (msg, sender) => {
-  if (msg?.type === "BG_CAPTURE") {
-    return captureSiteSnapshot();
+// ===== Content bridge =====
+async function captureFromPage(tabId) {
+  const resp = await browser.tabs.sendMessage(tabId, { type: "CAPTURE_FIELDS" });
+  if (!resp?.ok) throw new Error("capture failed");
+  return resp.data || {};
+}
+
+async function fillPage(tabId, data) {
+  const resp = await browser.tabs.sendMessage(tabId, { type: "FILL_FIELDS", data });
+  return { ok: !!resp?.ok, filled: resp?.filled ?? 0 };
+}
+
+// ===== Core features (multi-profile) =====
+
+// Save snapshot under a given name; create/overwrite that profile
+async function captureSiteSnapshot(profileName) {
+  const ctx = await getSiteKeyAndState();
+  if (!ctx.ok) return ctx;
+
+  const data = await captureFromPage(ctx.tab.id);
+  const { key, state, domain } = ctx;
+
+  state.profiles[profileName] = data;
+  if (!state.active) state.active = profileName; // first profile becomes active
+
+  await browser.storage.local.set({ [key]: state });
+  return { ok: true, domain, profile: profileName, count: Object.keys(data || {}).length };
+}
+
+// Fill using active profile or a provided one
+async function fillSiteSnapshot(profileName) {
+  const ctx = await getSiteKeyAndState();
+  if (!ctx.ok) return ctx;
+
+  const { key, state, domain, tab } = ctx;
+  const nameToUse = profileName || state.active;
+  if (!nameToUse) return { ok: false, reason: "No active profile for this domain" };
+
+  const data = state.profiles[nameToUse];
+  if (!data) return { ok: false, reason: `Profile "${nameToUse}" not found` };
+
+  const resp = await fillPage(tab.id, data);
+  return { ok: resp.ok, domain, profile: nameToUse, filled: resp.filled };
+}
+
+// List profiles for current site
+async function listSiteProfiles() {
+  const ctx = await getSiteKeyAndState();
+  if (!ctx.ok) return ctx;
+
+  const names = Object.keys(ctx.state.profiles);
+  return { ok: true, domain: ctx.domain, active: ctx.state.active, profiles: names };
+}
+
+// Set active profile
+async function setActiveProfile(profileName) {
+  const ctx = await getSiteKeyAndState();
+  if (!ctx.ok) return ctx;
+
+  const { key, state, domain } = ctx;
+  if (!state.profiles[profileName]) return { ok: false, reason: `Profile "${profileName}" not found` };
+  state.active = profileName;
+  await browser.storage.local.set({ [key]: state });
+  return { ok: true, domain, active: profileName };
+}
+
+// Delete a profile; if it was active, pick another arbitrarily
+async function deleteProfile(profileName) {
+  const ctx = await getSiteKeyAndState();
+  if (!ctx.ok) return ctx;
+
+  const { key, state, domain } = ctx;
+  if (!state.profiles[profileName]) return { ok: false, reason: `Profile "${profileName}" not found` };
+
+  delete state.profiles[profileName];
+
+  if (state.active === profileName) {
+    const names = Object.keys(state.profiles);
+    state.active = names.length ? names[0] : null;
   }
-  if (msg?.type === "BG_FILL") {
-    return fillSiteSnapshot();
-  }
-  if (msg?.type === "BG_CLEAR") {
-    const tab = await getActiveTab();
-    const domain = getDomain(tab?.url || "");
-    const key = `site:${domain}`;
-    await browser.storage.local.remove(key);
-    return { ok: true, domain };
+
+  await browser.storage.local.set({ [key]: state });
+  return { ok: true, domain, active: state.active };
+}
+
+// Clear ALL saved data for current site
+async function clearSiteAll() {
+  const ctx = await getSiteKeyAndState();
+  if (!ctx.ok) return ctx;
+  await browser.storage.local.remove(ctx.key);
+  return { ok: true, domain: ctx.domain };
+}
+
+// ===== Messages from popup =====
+browser.runtime.onMessage.addListener(async (msg) => {
+  try {
+    switch (msg?.type) {
+      case "BG_CAPTURE":         return await captureSiteSnapshot(msg.name);
+      case "BG_FILL":            return await fillSiteSnapshot(msg.name);
+      case "BG_LIST":            return await listSiteProfiles();
+      case "BG_SET_ACTIVE":      return await setActiveProfile(msg.name);
+      case "BG_DELETE":          return await deleteProfile(msg.name);
+      case "BG_CLEAR_ALL":       return await clearSiteAll();
+      default:                   return { ok: false, reason: "Unknown message" };
+    }
+  } catch (e) {
+    return { ok: false, reason: e?.message || String(e) };
   }
 });
 
-// Keyboard shortcut
+// ===== Keyboard shortcut: fill active profile =====
 browser.commands.onCommand.addListener(async (command) => {
   if (command === "quick-autofill") {
-    await fillSiteSnapshot();
+    await fillSiteSnapshot(); // uses active
   }
 });

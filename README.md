@@ -1,19 +1,22 @@
 # Sebov Autofill
 
-Sebov Autofill is a lightweight Firefox extension that lets you save form inputs on any website and autofill them later with one click or a keyboard shortcut.
+Sebov Autofill is a lightweight, open-source Firefox extension that saves form inputs on any site and autofills them later.  
+Perfect for quickly reusing frequently entered data without relying on external password managers or bloated solutions.
 
 ## Features
-- Save all visible form fields on the current page.
-- Autofill saved data on the same site.
-- Clear saved data for the current site.
-- Works on any website.
-- Optional keyboard shortcut (default: `Alt+Shift+L`).
+
+- **Save forms per site** – capture all visible, non-password fields.  
+- **Quick autofill** – instantly restore saved values with a shortcut or popup.  
+- **Multiple profiles per site** – store different form variants (e.g. "Work", "Personal").  
+- **Profile manager** – switch active profile, delete unused ones, or clear all with one click.  
+- **Keyboard shortcut** – default: `Alt+Shift+L` (configurable in Firefox).  
+- **Privacy-friendly** – all data is stored locally in your browser, never uploaded.
+
 
 ## Permissions
 - `storage` — to save and retrieve form data.
 - `tabs` and `activeTab` — to interact with the current page.
 - `<all_urls>` — to work on any site you choose.
 
----
 
 **Note:** The extension does not store or sync your data online. All form data is saved locally in your browser.
