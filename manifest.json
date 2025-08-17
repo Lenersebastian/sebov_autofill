@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Sebov Autofill",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Save form inputs on a site and autofill them later.",
   "permissions": [
     "storage",
