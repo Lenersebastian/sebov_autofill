@@ -107,15 +107,15 @@
     <button id="saveBtn">Save current form</button>
     <button id="fillBtn">Autofill this page (<span id="currentProfile">none</span>)</button>
 
-    <div class="row">
-      <button id="changeBtn" title="Hover to show saved forms">Change autofill form ▾</button>
-      <div id="dropdown" class="dropdown"><!-- populated by JS --></div>
-    </div>
-
     <!-- Import controls -->
     <div style="margin-top:8px">
       <button id="importBtn">Import JSON…</button>
       <input id="fileInput" type="file" accept="application/json,.json" style="display:none" />
+    </div>
+
+    <div class="row">
+      <button id="changeBtn" title="Hover to show saved forms">Change autofill form ▾</button>
+      <div id="dropdown" class="dropdown"><!-- populated by JS --></div>
     </div>
 
     <p id="status">Ready</p>

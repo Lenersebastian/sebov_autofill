@@ -247,12 +247,14 @@ async function refreshList() {
 }
 
 // ===== Import =====
-on("#importBtn", "click", () => {
-  const input = $("#fileInput");
-  if (input) {
-    input.value = "";
-    input.click();
-  }
+$("#importBtn")?.addEventListener("click", async () => {
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.url) { setStatus("No active tab URL."); return; }
+  let domain = "unknown";
+  try { domain = new URL(tab.url).hostname; } catch {}
+  const url = browser.runtime.getURL("import.html") + "#d=" + encodeURIComponent(domain);
+  await browser.windows.create({ url, type: "popup", width: 460, height: 220 });
+  setStatus("Import window opened…");
 });
 
 on("#fileInput", "change", async (e) => {

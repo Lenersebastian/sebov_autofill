@@ -17,6 +17,71 @@ async function getSiteKeyAndState() {
   return { ok: true, tab, domain, key, state };
 }
 
+// Extract a single profile snapshot from various JSON shapes
+async function _extractSingleProfileFromJSON(jsonText) {
+  let parsed;
+  try { parsed = (typeof jsonText === "string") ? JSON.parse(jsonText) : jsonText; }
+  catch { return { ok: false, reason: "Invalid JSON (parse failed)" }; }
+
+  // Case A: { profiles: { "<name>": {..}, ... }, active? }
+  if (parsed && typeof parsed === "object" && parsed.profiles && typeof parsed.profiles === "object") {
+    const entries = Object.entries(parsed.profiles);
+    if (!entries.length) return { ok: false, reason: "No profiles in file" };
+    // Prefer active if present; else first
+    const activeName = typeof parsed.active === "string" ? parsed.active : null;
+    const chosen = activeName && parsed.profiles[activeName] ? [activeName, parsed.profiles[activeName]] : entries[0];
+    return { ok: true, data: chosen[1] };
+  }
+
+  // Case B: raw profile map (keys look like "input::name=..."), treat whole object as one profile
+  if (parsed && typeof parsed === "object") {
+    const keys = Object.keys(parsed);
+    const looksLikeProfile = keys.some(k => k.includes("::")) || keys.some(k => typeof parsed[k] === "string");
+    if (looksLikeProfile) return { ok: true, data: parsed };
+  }
+
+  return { ok: false, reason: "Unsupported JSON structure" };
+}
+
+// Import under a specific NAME for the current site
+async function importProfileWithName(jsonText, targetName, targetDomain) {
+  // Parse JSON
+  let parsed;
+  try { parsed = (typeof jsonText === "string") ? JSON.parse(jsonText) : jsonText; }
+  catch { return { ok: false, reason: "Invalid JSON (parse failed)" }; }
+
+  // Extract one profile's data
+  let data = null;
+  if (parsed && typeof parsed === "object") {
+    if (parsed.profiles && typeof parsed.profiles === "object") {
+      const entries = Object.entries(parsed.profiles);
+      if (!entries.length) return { ok: false, reason: "No profiles in file" };
+      const activeName = typeof parsed.active === "string" ? parsed.active : null;
+      data = activeName && parsed.profiles[activeName] ? parsed.profiles[activeName] : entries[0][1];
+    } else {
+      data = parsed; // treat whole object as one snapshot
+    }
+  }
+  if (!data || typeof data !== "object") return { ok: false, reason: "Unsupported JSON structure" };
+
+  // Store under the provided domain
+  const { ok, domain, key, state, reason } = await (async function getStateForDomain(d) {
+    if (!d) return { ok: false, reason: "No domain" };
+    const k = `site:${d}`;
+    const stored = await browser.storage.local.get(k);
+    return { ok: true, domain: d, key: k, state: stored[k] || { profiles: {}, active: null } };
+  })(targetDomain);
+  if (!ok) return { ok, reason };
+
+  state.profiles[targetName] = data;             // overwrite if exists
+  if (!state.active) state.active = targetName;  // set active if none
+  await browser.storage.local.set({ [key]: state });
+
+  return { ok: true, domain, imported: 1, active: state.active };
+}
+
+
+
 // Build payload for a single profile export
 async function exportSiteProfiles(profileName) {
   const ctx = await getSiteKeyAndState();
@@ -210,7 +275,10 @@ browser.runtime.onMessage.addListener(async (msg) => {
         return await saveJSONFile(fname, exp.payload, true);
       }
       case "BG_IMPORT":          return await importSiteProfiles(msg.json, msg.mode || "merge");
-
+      case "BG_IMPORT_WITH_NAME": {
+        // expects msg.json (string), msg.name (string), msg.domain (string)
+        return await importProfileWithName(msg.json, msg.name, msg.domain);
+      }
       default:                   return { ok: false, reason: "Unknown message" };
     }
   } catch (e) {

@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Import Autofill JSON</title>
+  <style>
+    body { margin:16px; font:14px system-ui, sans-serif; background:#1e1e1e; color:#f0f0f0; }
+    h3 { margin:0 0 12px; }
+    .row { margin:10px 0; display:flex; gap:8px; align-items:center; }
+    .row label { min-width:110px; }
+    input[type="text"] {
+      flex:1; padding:8px; border-radius:6px; border:1px solid #555;
+      background:#1e1e1e; color:#f0f0f0;
+    }
+    input[type="file"] { flex:1; }
+    button { width:100%; padding:10px; border:0; border-radius:8px; background:#3a3a3a; color:#fff; cursor:pointer; }
+    button:hover { background:#505050; }
+    .status { margin-top:12px; color:#bbb; min-height:1.4em; white-space:pre-wrap; }
+  </style>
+</head>
+<body>
+  <h3>Import Autofill JSON</h3>
+
+  <div class="row">
+    <label for="nameInput">Profile name</label>
+    <input id="nameInput" type="text" placeholder="Imported" autocomplete="off" />
+  </div>
+
+  <div class="row">
+    <label for="fileInput">JSON file</label>
+    <input id="fileInput" type="file" accept="application/json,.json" />
+  </div>
+
+  <button id="importBtn">Import</button>
+  <div id="status" class="status">Pick a file and enter a name.</div>
+
+  <!-- External script to satisfy CSP -->
+  <script src="import.js"></script>
+</body>
+</html>
