@@ -80,8 +80,6 @@ async function importProfileWithName(jsonText, targetName, targetDomain) {
   return { ok: true, domain, imported: 1, active: state.active };
 }
 
-
-
 // Build payload for a single profile export
 async function exportSiteProfiles(profileName) {
   const ctx = await getSiteKeyAndState();

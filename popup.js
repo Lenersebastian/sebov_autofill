@@ -212,8 +212,6 @@ async function refreshList() {
         setStatus(`Error: ${e.message || e}`);
       }
     });
-
-
     row.appendChild(label);
     row.appendChild(actions);
     container.appendChild(row);
