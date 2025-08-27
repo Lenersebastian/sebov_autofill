@@ -1,3 +1,62 @@
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Wait until finder() returns a truthy element or timeout
+async function waitFor(finder, { timeout = 1500, interval = 50 } = {}) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const el = finder();
+    if (el) return el;
+    await sleep(interval);
+  }
+  return null;
+}
+
+// Looks like our special readonly + arrow combo
+function isArrowCombo(el) {
+  if (!el || el.tagName !== "INPUT") return false;
+  if (!el.readOnly) return false;
+  // arrow is often the next sibling or in same container
+  const sib = el.nextElementSibling;
+  if (sib && sib.classList.contains("selectionbtn")) return true;
+  // also check same container
+  const btn = el.parentElement?.querySelector(".selectionbtn");
+  return !!btn;
+}
+
+// Find the arrow button for this input
+function findSelectionButton(el) {
+  const sib = el.nextElementSibling;
+  if (sib && sib.classList.contains("selectionbtn")) return sib;
+  return el.parentElement?.querySelector(".selectionbtn") || null;
+}
+
+// After clicking the arrow, try to find the option list
+function findOptionContainer() {
+  // common patterns: listbox/menu/popups/tables
+  return document.querySelector(
+    "[role='listbox'], [role='menu'], .menu, .dropdown-menu, .popup, .popupMenu, table, ul, div.selectionPopup"
+  );
+}
+
+// Find an option by visible text (exact, then contains)
+function findOptionByText(container, wanted) {
+  if (!container) return null;
+  const txt = String(wanted ?? "").trim().toLowerCase();
+  if (!txt) return null;
+  const candidates = container.querySelectorAll(
+    "[role='option'], [role='menuitem'], li, a, td, div, span"
+  );
+  for (const c of candidates) {
+    const t = (c.textContent || "").trim().toLowerCase();
+    if (t === txt) return c;
+  }
+  for (const c of candidates) {
+    const t = (c.textContent || "").trim().toLowerCase();
+    if (txt && t.includes(txt)) return c;
+  }
+  return null;
+}
+
 // Find a stable key for a field
 function fieldKey(el) {
   const attrs = ["name", "id", "aria-label", "placeholder"];
@@ -40,6 +99,10 @@ function captureValues() {
         // radios share name so u need multiple keys
         data[key] = el.value;
       }
+    } else if (isArrowCombo(el)) {
+      // store the visible text shown in the readonly input
+      const shown = (el.value || el.title || el.textContent || "").trim();
+      data[key] = shown;
     } else {
       data[key] = el.value ?? "";
     }
@@ -47,42 +110,81 @@ function captureValues() {
   return data;
 }
 
-// Fill values
-function fillValues(data) {
+async function fillValues(data) {
   const fields = getAllFields();
   let filled = 0;
-  // Map keys to elements for faster lookup
   const map = new Map(fields.map(el => [fieldKey(el), el]));
+
   for (const [key, val] of Object.entries(data || {})) {
     const el = map.get(key);
     if (!el) continue;
     const tag = el.tagName.toLowerCase();
+
     if (tag === "select") {
       el.value = val;
       el.dispatchEvent(new Event("change", { bubbles: true }));
       filled++;
-    } else if (el.type === "checkbox") {
-      const shouldCheck = val === "__CHECKED__";
-      if (el.checked !== shouldCheck) {
-        el.checked = shouldCheck;
+      continue;
+    }
+    if (el.type === "checkbox") {
+      const should = val === "__CHECKED__";
+      if (el.checked !== should) {
+        el.checked = should;
         el.dispatchEvent(new Event("change", { bubbles: true }));
       }
       filled++;
-    } else if (el.type === "radio") {
-      // Match by value
+      continue;
+    }
+    if (el.type === "radio") {
       if (el.value === val) {
         el.checked = true;
         el.dispatchEvent(new Event("change", { bubbles: true }));
         filled++;
       }
-    } else {
-      if ((el.value ?? "") !== val) {
-        el.value = val;
+      continue;
+    }
+    if (isArrowCombo(el)) {
+      try {
+        const btn = findSelectionButton(el);
+        if (btn) {
+          // open the selector
+          btn.click();
+          // wait for popup/list to render
+          const container = await waitFor(findOptionContainer, { timeout: 2000, interval: 50 });
+          if (container) {
+            const opt = findOptionByText(container, val);
+            if (opt) {
+              opt.click();
+              // give framework time to update the readonly input
+              await sleep(50);
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+              filled++;
+              continue;
+            }
+          }
+        }
+        // Fallback: try setting value directly (some widgets accept it)
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+        if (setter) setter.call(el, String(val ?? ""));
+        else el.value = String(val ?? "");
         el.dispatchEvent(new Event("input", { bubbles: true }));
         el.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      filled++;
+        filled++;
+      } catch { /* ignore and move on */ }
+      continue;
     }
+
+    // default text/textarea handling (React-friendly)
+    if ((el.value ?? "") !== val) {
+      const proto = tag === "textarea" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+      if (setter) setter.call(el, val);
+      else el.value = val;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    filled++;
   }
   return filled;
 }
@@ -95,7 +197,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
   }
   if (msg?.type === "FILL_FIELDS") {
     const { data } = msg;
-    const count = fillValues(data);
+    const count = await fillValues(data);
     return { ok: true, filled: count };
   }
 });
