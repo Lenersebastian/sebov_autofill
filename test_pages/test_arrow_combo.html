@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Arrow Combo Test</title>
+  <style>
+    .selectionbtn {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      background: #ccc;
+      border: 1px solid #888;
+      text-align: center;
+      cursor: pointer;
+      vertical-align: top;
+    }
+    .dropdown {
+      position: absolute;
+      top: 40px;
+      left: 10px;
+      border: 1px solid #888;
+      background: #fff;
+      display: none;
+      min-width: 100px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+    .dropdown div {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .dropdown div:hover {
+      background: #eee;
+    }
+  </style>
+</head>
+<body>
+  <h3>Arrow Combo Test</h3>
+
+  <div style="position:relative; display:inline-block;">
+    <input id="comboInput" type="text" readonly class="text" style="width:100px;" placeholder="Pick option">
+    <a href="javascript:" class="selectionbtn">▼</a>
+
+    <div class="dropdown" id="comboMenu">
+      <div data-val="Option A">Option A</div>
+      <div data-val="Option B">Option B</div>
+      <div data-val="Option C">Option C</div>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById("comboInput");
+    const btn = document.querySelector(".selectionbtn");
+    const menu = document.getElementById("comboMenu");
+
+    // Toggle menu on arrow click
+    btn.addEventListener("click", () => {
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    });
+
+    // When an option is clicked, fill input and close menu
+    menu.addEventListener("click", e => {
+      if (e.target.dataset.val) {
+        input.value = e.target.dataset.val;
+        menu.style.display = "none";
+        // Dispatch events to mimic real sites
+        input.dispatchEvent(new Event("input", {bubbles:true}));
+        input.dispatchEvent(new Event("change", {bubbles:true}));
+      }
+    });
+
+    // Click outside closes menu
+    document.addEventListener("click", e => {
+      if (!menu.contains(e.target) && e.target !== btn) {
+        menu.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
