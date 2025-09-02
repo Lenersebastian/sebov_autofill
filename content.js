@@ -1,7 +1,7 @@
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Wait until finder() returns a truthy element or timeout
-async function waitFor(finder, { timeout = 1500, interval = 50 } = {}) {
+async function waitFor(finder, { timeout = 500, interval = 25 } = {}) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     const el = finder();
@@ -74,14 +74,24 @@ function fieldKey(el) {
 function getAllFields() {
   return [...document.querySelectorAll("input, select, textarea")].filter(el => {
     const type = (el.type || "").toLowerCase();
-    if (el.disabled || el.readOnly) return false;
+
+    // Don’t touch disabled fields
+    if (el.disabled) return false;
+
     // Skip non-form types
     if (["hidden", "button", "submit", "reset", "file", "image"].includes(type)) return false;
-    // Skip password
+
+    // Skip password fields
     if (type === "password") return false;
-    // Only visible fields
+
+    // Visibility check
     const style = window.getComputedStyle(el);
-    return style.visibility !== "hidden" && style.display !== "none";
+    if (style.visibility === "hidden" || style.display === "none") return false;
+
+    // Keep readonly if (and only if) it's the arrow-combo.
+    if (el.readOnly && !isArrowCombo(el)) return false;
+
+    return true;
   });
 }
 
@@ -150,13 +160,13 @@ async function fillValues(data) {
           // open the selector
           btn.click();
           // wait for popup/list to render
-          const container = await waitFor(findOptionContainer, { timeout: 2000, interval: 50 });
+          const container = await waitFor(findOptionContainer, { timeout: 500, interval: 25 });
           if (container) {
             const opt = findOptionByText(container, val);
             if (opt) {
               opt.click();
               // give framework time to update the readonly input
-              await sleep(50);
+              await sleep(25);
               el.dispatchEvent(new Event("input", { bubbles: true }));
               el.dispatchEvent(new Event("change", { bubbles: true }));
               filled++;

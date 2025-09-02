@@ -32,49 +32,81 @@
     .dropdown div:hover {
       background: #eee;
     }
+    .combo-container {
+      position: relative;
+      display: inline-block;
+      margin: 10px;
+    }
   </style>
 </head>
 <body>
   <h3>Arrow Combo Test</h3>
 
-  <div style="position:relative; display:inline-block;">
-    <input id="comboInput" type="text" readonly class="text" style="width:100px;" placeholder="Pick option">
-    <a href="javascript:" class="selectionbtn">▼</a>
-
-    <div class="dropdown" id="comboMenu">
-      <div data-val="Option A">Option A</div>
-      <div data-val="Option B">Option B</div>
-      <div data-val="Option C">Option C</div>
-    </div>
-  </div>
+  <div id="combos"></div>
 
   <script>
-    const input = document.getElementById("comboInput");
-    const btn = document.querySelector(".selectionbtn");
-    const menu = document.getElementById("comboMenu");
+    const combosContainer = document.getElementById("combos");
 
-    // Toggle menu on arrow click
-    btn.addEventListener("click", () => {
-      menu.style.display = menu.style.display === "block" ? "none" : "block";
-    });
+    function createCombo(id) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "combo-container";
 
-    // When an option is clicked, fill input and close menu
-    menu.addEventListener("click", e => {
-      if (e.target.dataset.val) {
-        input.value = e.target.dataset.val;
-        menu.style.display = "none";
-        // Dispatch events to mimic real sites
-        input.dispatchEvent(new Event("input", {bubbles:true}));
-        input.dispatchEvent(new Event("change", {bubbles:true}));
-      }
-    });
+      const input = document.createElement("input");
+      input.id = "comboInput" + id;
+      input.type = "text";
+      input.readOnly = true;
+      input.className = "text";
+      input.placeholder = "Pick option";
+      input.style.width = "100px";
 
-    // Click outside closes menu
-    document.addEventListener("click", e => {
-      if (!menu.contains(e.target) && e.target !== btn) {
-        menu.style.display = "none";
-      }
-    });
+      const btn = document.createElement("a");
+      btn.href = "javascript:";
+      btn.className = "selectionbtn";
+      btn.textContent = "▼";
+
+      const menu = document.createElement("div");
+      menu.className = "dropdown";
+      menu.id = "comboMenu" + id;
+      ["Option A", "Option B", "Option C"].forEach(opt => {
+        const div = document.createElement("div");
+        div.dataset.val = opt;
+        div.textContent = opt;
+        menu.appendChild(div);
+      });
+
+      wrapper.appendChild(input);
+      wrapper.appendChild(btn);
+      wrapper.appendChild(menu);
+
+      // Toggle menu on arrow click
+      btn.addEventListener("click", () => {
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+      });
+
+      // When an option is clicked, fill input and close menu
+      menu.addEventListener("click", e => {
+        if (e.target.dataset.val) {
+          input.value = e.target.dataset.val;
+          menu.style.display = "none";
+          input.dispatchEvent(new Event("input", {bubbles:true}));
+          input.dispatchEvent(new Event("change", {bubbles:true}));
+        }
+      });
+
+      // Click outside closes menu
+      document.addEventListener("click", e => {
+        if (!menu.contains(e.target) && e.target !== btn) {
+          menu.style.display = "none";
+        }
+      });
+
+      return wrapper;
+    }
+
+    // Create 21 combos (1 original + 20 more)
+    for (let i = 0; i < 21; i++) {
+      combosContainer.appendChild(createCombo(i));
+    }
   </script>
 </body>
 </html>
