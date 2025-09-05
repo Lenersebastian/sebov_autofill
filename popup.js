@@ -200,7 +200,7 @@ async function refreshList() {
     // export this profile
     const dlBtn = document.createElement("span");
     dlBtn.className = "icon-btn";
-    dlBtn.textContent = "⬇";
+    dlBtn.textContent = "⭳";
     dlBtn.title = `Export "${name}" as JSON`;
     dlBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
