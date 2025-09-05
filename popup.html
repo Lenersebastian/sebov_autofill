@@ -34,7 +34,8 @@
         position: absolute;
         left: 0;
         right: 0;
-        top: calc(100% - 1px);
+        top: 100%;            
+        margin-top: -5px;
         background: #262626;
         border: 1px solid #3f3f3f;
         border-radius: 6px;
@@ -114,7 +115,7 @@
     </div>
 
     <div class="row">
-      <button id="changeBtn" title="Hover to show saved forms">Change autofill form ▾</button>
+      <button id="changeBtn">Change autofill form ▾</button>
       <div id="dropdown" class="dropdown"><!-- populated by JS --></div>
     </div>
 
