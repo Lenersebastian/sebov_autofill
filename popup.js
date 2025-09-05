@@ -10,24 +10,42 @@ function on(sel, evt, fn) {
 
 // Simple in-popup modal (replaces prompt/confirm)
 function showNameDialog(defaultValue = "Default") {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const ov = $("#overlay");
-    $("#dlgTitle").textContent = "Sebov Autofill";
-    $("#dlgBody").innerHTML = `
-      <label for="nameInput">Save as profile name:</label>
-      <input id="nameInput" type="text" />
-    `;
-    $("#dlgOk").textContent = "Save";
-    $("#dlgCancel").textContent = "Cancel";
+    const title = $("#dlgTitle");
+    const body = $("#dlgBody");
+    const okBtn = $("#dlgOk");
+    const cancelBtn = $("#dlgCancel");
+    title.textContent = "Sebov Autofill";
+    body.replaceChildren();
+
+    const label = document.createElement("label");
+    label.setAttribute("for", "nameInput");
+    label.textContent = "Save as profile name:";
+    const input = document.createElement("input");
+    input.id = "nameInput";
+    input.type = "text";
+    body.append(label, input);
+
+    okBtn.textContent = "Save";
+    cancelBtn.textContent = "Cancel";
     ov.style.display = "flex";
-    const input = $("#nameInput");
+
     input.value = defaultValue;
     input.focus();
     input.select();
 
-    const done = (val) => { ov.style.display = "none"; resolve(val); };
-    $("#dlgOk").onclick = () => done(input.value.trim());
-    $("#dlgCancel").onclick = () => done(null);
+    const done = (val) => {
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      ov.onkeydown = null;
+      ov.style.display = "none";
+      resolve(val);
+    };
+
+    okBtn.onclick = () => done(input.value.trim());
+    cancelBtn.onclick = () => done(null);
+
     ov.onkeydown = (e) => {
       if (e.key === "Enter") { e.preventDefault(); done(input.value.trim()); }
       if (e.key === "Escape") { e.preventDefault(); done(null); }
@@ -36,16 +54,34 @@ function showNameDialog(defaultValue = "Default") {
 }
 
 function showConfirm(message) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const ov = $("#overlay");
-    $("#dlgTitle").textContent = "Confirm";
-    $("#dlgBody").innerHTML = `<div style="margin-bottom:10px">${message}</div>`;
-    $("#dlgOk").textContent = "OK";
-    $("#dlgCancel").textContent = "Cancel";
+    const title = $("#dlgTitle");
+    const body = $("#dlgBody");
+    const okBtn = $("#dlgOk");
+    const cancelBtn = $("#dlgCancel");
+    title.textContent = "Confirm";
+    body.replaceChildren();
+    const msgDiv = document.createElement("div");
+    msgDiv.style.marginBottom = "10px";
+    msgDiv.textContent = String(message ?? ""); 
+    body.append(msgDiv);
+
+    okBtn.textContent = "OK";
+    cancelBtn.textContent = "Cancel";
     ov.style.display = "flex";
-    const done = (val) => { ov.style.display = "none"; resolve(val); };
-    $("#dlgOk").onclick = () => done(true);
-    $("#dlgCancel").onclick = () => done(false);
+
+    const done = (val) => {
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      ov.onkeydown = null;
+      ov.style.display = "none";
+      resolve(val);
+    };
+
+    okBtn.onclick = () => done(true);
+    cancelBtn.onclick = () => done(false);
+
     ov.onkeydown = (e) => {
       if (e.key === "Enter") { e.preventDefault(); done(true); }
       if (e.key === "Escape") { e.preventDefault(); done(false); }
@@ -107,11 +143,22 @@ if (changeBtn && dropdown) {
 async function refreshList() {
   const resp = await browser.runtime.sendMessage({ type: "BG_LIST" });
   const container = $("#dropdown");
-  container.innerHTML = "";
+
+  // clear old items safely
+  container.replaceChildren();
 
   if (!resp?.ok) {
     $("#currentProfile").textContent = "none";
-    container.innerHTML = `<div class="item"><span class="name">No saved forms for this site</span></div>`;
+
+    const row = document.createElement("div");
+    row.className = "item";
+
+    const span = document.createElement("span");
+    span.className = "name";
+    span.textContent = "No saved forms for this site";
+
+    row.append(span);
+    container.append(row);
     return;
   }
 
@@ -119,7 +166,15 @@ async function refreshList() {
   $("#currentProfile").textContent = active || "none";
 
   if (!profiles.length) {
-    container.innerHTML = `<div class="item"><span class="name">No saved forms</span></div>`;
+    const row = document.createElement("div");
+    row.className = "item";
+
+    const span = document.createElement("span");
+    span.className = "name";
+    span.textContent = "No saved forms";
+
+    row.append(span);
+    container.append(row);
     return;
   }
 
@@ -142,10 +197,10 @@ async function refreshList() {
     const actions = document.createElement("div");
     actions.className = "actions";
 
-    // 📥 export this profile
+    // export this profile
     const dlBtn = document.createElement("span");
     dlBtn.className = "icon-btn";
-    dlBtn.textContent = "📥";
+    dlBtn.textContent = "⬇";
     dlBtn.title = `Export "${name}" as JSON`;
     dlBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
