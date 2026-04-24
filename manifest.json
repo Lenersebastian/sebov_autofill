@@ -40,8 +40,9 @@
   },
   "browser_specific_settings": {
     "gecko": {
+      "id": "sebov-autofill@personal",
       "data_collection_permissions": {
-        "used": [],
+        "required": ["none"],
         "optional": []
       }
     }
