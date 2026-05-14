@@ -9,7 +9,7 @@ Perfect for quickly reusing frequently entered data without relying on external 
 - **Quick autofill** – instantly restore saved values with a shortcut or popup.  
 - **Multiple profiles per site** – store different form variants (e.g. "Work", "Personal").  
 - **Profile manager** – switch active profile, delete unused ones, or clear all with one click.  
-- **Keyboard shortcut** – default: `Alt+Shift+L` (configurable in Firefox).  
+- **Keyboard shortcut** – default: `Ctrl+Shift+Y` (configurable in Firefox).  
 - **Import & Export** – back up your saved profiles to JSON or move them between browsers.  
 - **Privacy-friendly** – all data is stored locally in your browser, never uploaded.
 
