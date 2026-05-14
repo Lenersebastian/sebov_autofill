@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Sebov Autofill",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Save form inputs on a site and autofill them later.",
   "permissions": [
     "storage",
@@ -40,7 +40,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "sebov-autofill@personal",
+      "id": "{a0fac624-bea8-4966-b667-205e831c0519}",
       "data_collection_permissions": {
         "required": ["none"],
         "optional": []
